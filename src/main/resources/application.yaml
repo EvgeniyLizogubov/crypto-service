@@ -4,3 +4,15 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     enabled: true
+
+crypto:
+  providers:
+    binance:
+      base-url: https://api.binance.com
+      poll-interval: 1s
+    coinbase:
+      base-url: https://api.exchange.coinbase.com
+      poll-interval: 1s
+    kraken:
+      base-url: https://api.kraken.com
+      poll-interval: 1s
