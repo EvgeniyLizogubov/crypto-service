@@ -1,5 +1,6 @@
 package io.github.evgeniylizogubov.cryptoservice.entity;
 
+import lombok.Builder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
@@ -8,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 @Table("prices")
+@Builder
 public record PriceEntity(
 
         @Id
