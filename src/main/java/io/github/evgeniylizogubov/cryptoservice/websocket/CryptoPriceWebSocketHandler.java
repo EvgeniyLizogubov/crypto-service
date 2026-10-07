@@ -1,6 +1,5 @@
 package io.github.evgeniylizogubov.cryptoservice.websocket;
 
-import tools.jackson.databind.ObjectMapper;
 import io.github.evgeniylizogubov.cryptoservice.model.AggregatedPrice;
 import io.github.evgeniylizogubov.cryptoservice.service.PriceAggregatorService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,7 @@ import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Collections;
 import java.util.Set;
