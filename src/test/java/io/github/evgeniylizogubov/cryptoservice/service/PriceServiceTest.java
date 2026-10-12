@@ -62,7 +62,6 @@ class PriceServiceTest {
         );
 
         when(priceCacheService.getLatestPrice("BTCUSDT")).thenReturn(Mono.just(cachedPrice));
-        when(priceCacheService.saveLatestPrice(any())).thenReturn(Mono.just(true));
 
         StepVerifier.create(priceService.getLatestPrice("BTCUSDT"))
                 .expectNext(cachedPrice)
@@ -106,6 +105,7 @@ class PriceServiceTest {
         when(priceReactiveRepository.findFirstBySymbolOrderByCreatedAtDesc("BTCUSDT")).thenReturn(Mono.empty());
         when(priceProvider.getLatestPrice("BTCUSDT")).thenReturn(Mono.just(cryptoPrice));
         when(priceCacheService.saveLatestPrice(any())).thenReturn(Mono.just(true));
+        when(priceReactiveRepository.save(any(PriceEntity.class))).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
 
         StepVerifier.create(priceService.getLatestPrice("BTCUSDT"))
                 .assertNext(price -> {

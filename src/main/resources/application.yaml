@@ -6,7 +6,10 @@ spring:
     enabled: true
 
 crypto:
+  symbols: BTCUSDT,ETHUSDT
   providers:
+    mock:
+      enabled: false
     binance:
       base-url: https://api.binance.com
       poll-interval: 1s

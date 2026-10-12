@@ -8,6 +8,7 @@ import io.github.evgeniylizogubov.cryptoservice.repository.PriceReactiveReposito
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -24,13 +25,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PriceAggregatorService {
 
-    private static final List<String> DEFAULT_SYMBOLS = List.of("BTCUSDT", "ETHUSDT");
     private static final int BUFFER_SIZE = 10;
     private static final Duration BUFFER_TIMEOUT = Duration.ofSeconds(2);
 
     private final List<PriceProvider> priceProviders;
     private final PriceCacheService priceCacheService;
     private final PriceReactiveRepository priceReactiveRepository;
+
+    @Value("${crypto.symbols:BTCUSDT,ETHUSDT}")
+    private List<String> symbols = List.of("BTCUSDT", "ETHUSDT");
 
     // Горячий multicast-канал для рассылки всем подписчикам (SSE, WS и внутренним сервисам)
     private final Sinks.Many<AggregatedPrice> priceSink =
@@ -39,10 +42,10 @@ public class PriceAggregatorService {
     @PostConstruct
     public void startAggregationPipeline() {
         // Запускаем пайплайны агрегации для базовых криптовалютных пар
-        for (String symbol : DEFAULT_SYMBOLS) {
+        for (String symbol : symbols) {
             aggregateForSymbol(symbol)
                     .subscribe(
-                            priceSink::tryEmitNext,
+                            this::emit,
                             error -> log.error("Error in aggregation pipeline for {}: {}", symbol, error.getMessage())
                     );
         }
@@ -110,6 +113,13 @@ public class PriceAggregatorService {
         BigDecimal avg = sum.divide(BigDecimal.valueOf(ticks.size()), 4, RoundingMode.HALF_UP);
 
         return new AggregatedPrice(symbol, avg, min, max, Instant.now());
+    }
+
+    private void emit(AggregatedPrice price) {
+        Sinks.EmitResult result = priceSink.tryEmitNext(price);
+        if (result.isFailure()) {
+            log.warn("Failed to emit aggregated price for {}: {}", price.symbol(), result);
+        }
     }
 
     private Mono<PriceEntity> saveToDatabase(AggregatedPrice aggregatedPrice) {

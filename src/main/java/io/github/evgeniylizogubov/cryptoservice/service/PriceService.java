@@ -29,14 +29,34 @@ public class PriceService {
         String normalizedSymbol = symbol.toUpperCase();
 
         return priceCacheService.getLatestPrice(normalizedSymbol)
-                .switchIfEmpty(Mono.defer(() -> getFromDatabase(normalizedSymbol)))
-                .switchIfEmpty(Mono.defer(() -> getFromExternalProvider(normalizedSymbol)))
-                .delayUntil(price -> priceCacheService.saveLatestPrice(price)
-                        .onErrorResume(ex -> {
-                            log.error("Failed to save price to cache for {}: {}", price.symbol(), ex.getMessage());
-                            return Mono.empty();
-                        })
-                );
+                .switchIfEmpty(Mono.defer(() -> getFromDatabase(normalizedSymbol)
+                        .delayUntil(this::cacheQuietly)))
+                .switchIfEmpty(Mono.defer(() -> getFromExternalProvider(normalizedSymbol)
+                        .delayUntil(price -> cacheQuietly(price).then(saveToDatabaseQuietly(price)))));
+    }
+
+    private Mono<Void> cacheQuietly(AggregatedPrice price) {
+        return priceCacheService.saveLatestPrice(price)
+                .then()
+                .onErrorResume(ex -> {
+                    log.error("Failed to save price to cache for {}: {}", price.symbol(), ex.getMessage());
+                    return Mono.empty();
+                });
+    }
+
+    private Mono<Void> saveToDatabaseQuietly(AggregatedPrice price) {
+        PriceEntity entity = PriceEntity.builder()
+                .symbol(price.symbol())
+                .exchange("AGGREGATED")
+                .price(price.averagePrice())
+                .createdAt(price.timestamp())
+                .build();
+        return priceReactiveRepository.save(entity)
+                .then()
+                .onErrorResume(ex -> {
+                    log.error("Failed to save price to database for {}: {}", price.symbol(), ex.getMessage());
+                    return Mono.empty();
+                });
     }
 
     /**

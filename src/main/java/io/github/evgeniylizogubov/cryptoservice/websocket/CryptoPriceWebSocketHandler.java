@@ -5,6 +5,7 @@ import io.github.evgeniylizogubov.cryptoservice.service.PriceAggregatorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketMessage;
@@ -48,18 +49,19 @@ public class CryptoPriceWebSocketHandler implements WebSocketHandler {
 
         Flux<WebSocketMessage> output = priceAggregatorService.getAggregatedPriceStream()
                 .filter(price -> subscribedSymbols.isEmpty() || subscribedSymbols.contains(price.symbol()))
-                .map(this::toJson)
+                .mapNotNull(this::toJson)
                 .map(session::textMessage);
 
         return Mono.when(input, session.send(output)).then();
     }
 
+    @Nullable
     private String toJson(AggregatedPrice price) {
         try {
             return objectMapper.writeValueAsString(price);
         } catch (Exception e) {
             log.error("Failed to serialize AggregatedPrice to JSON", e);
-            return "{}";
+            return null;
         }
     }
 }

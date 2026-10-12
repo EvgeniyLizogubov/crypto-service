@@ -54,7 +54,7 @@ public class KrakenPriceClient implements PriceProvider {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/0/public/Ticker")
-                        .queryParam("pair", symbol.toUpperCase())
+                        .queryParam("pair", toKrakenPair(symbol))
                         .build())
                 .retrieve()
                 .bodyToMono(KrakenTickerResponse.class)
@@ -71,9 +71,13 @@ public class KrakenPriceClient implements PriceProvider {
                             }
 
                             KrakenTickerResponse.KrakenPairInfo pairInfo = response.result().values().iterator().next();
+                            BigDecimal price = pairInfo.getPrice();
+                            if (price == null) {
+                                return Mono.empty();
+                            }
                             return Mono.just(new CryptocurrencyPrice(
                                     symbol.toUpperCase(),
-                                    pairInfo.getPrice(),
+                                    price,
                                     ExchangeName.KRAKEN,
                                     Instant.now()
                             ));
@@ -81,11 +85,16 @@ public class KrakenPriceClient implements PriceProvider {
 
     }
 
+    private String toKrakenPair(String symbol) {
+        String upper = symbol.toUpperCase();
+        return upper.startsWith("BTC") ? "XBT" + upper.substring(3) : upper;
+    }
+
     public record KrakenTickerResponse(List<String> error, Map<String, KrakenPairInfo> result) {
         public record KrakenPairInfo(@JsonProperty("c") List<String> lastTradeClosed) {
             public BigDecimal getPrice() {
                 if (lastTradeClosed == null || lastTradeClosed.isEmpty()) {
-                    return BigDecimal.ZERO;
+                    return null;
                 }
                 return new BigDecimal(lastTradeClosed.getFirst());
             }

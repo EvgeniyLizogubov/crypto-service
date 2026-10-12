@@ -65,7 +65,16 @@ public class CoinbasePriceClient implements PriceProvider {
     }
 
     private String formatSymbol(String symbol) {
-        return symbol.replace("USDT", "-USDT");
+        String upper = symbol.toUpperCase();
+        if (upper.contains("-")) {
+            return upper;
+        }
+        for (String quote : new String[]{"USDT", "USDC", "USD", "EUR", "GBP"}) {
+            if (upper.endsWith(quote) && upper.length() > quote.length()) {
+                return upper.substring(0, upper.length() - quote.length()) + "-" + quote;
+            }
+        }
+        return upper;
     }
 
     public record CoinbaseTickerResponse(BigDecimal price, Instant time) {}
